@@ -46,32 +46,27 @@ Run `npm test`. The tests cover authoritative pricing, intent contents, Paytm
 success/failure/pending mapping, API validation, pixel events and existing
 storefront invariants. No live payment is performed by the test suite.
 
-## Purchase delivery at payment confirmation
+## Meta Pixel events
 
-Purchase is now sent by `/api/verify-payment` through Meta Conversions API as
-soon as Paytm confirms success, before any success-page navigation. The browser
-also queues the matching pixel event at that point. Opening success.html alone
-no longer records a purchase. Both use `purchase:TXN...` as the event ID for
-Meta deduplication across webhook retries, polling and browser events.
+The real payment action emits one browser `AddPaymentInfo` event after the
+server has created the payment. Its value comes from the server-priced payment,
+the currency is `INR`, and the transaction ID prevents repeated clicks from
+sending the event twice.
 
-Set server-only `META_ACCESS_TOKEN`, `META_PIXEL_ID` (the dataset authorized by
-the token), and `STORE_URL`. Do not commit the credential. Extra browser pixels
-need their own authorized CAPI configuration if they also need server events.
+This code intentionally does not send `Purchase` from the browser, verification
+API, or payment webhook. Configure `Purchase` in Meta's Event Setup Tool using
+an exact URL rule for `/success.html`. Do not add another code-based Purchase
+event unless the Event Setup Tool rule is removed first. The success page keeps
+its normal `PageView`, which the exact-URL rule needs as its page signal. The
+page removes transaction query parameters before Pixel loads, so configure the
+rule as URL equals `https://YOUR-DOMAIN/success.html`.
 
 Configure Paytm's payment-status webhook URL as
-`https://YOUR-DOMAIN/api/payment-webhook`. This endpoint independently rechecks
-Paytm instead of trusting callback status/amount. It returns 503 on pending
-verification, missing Meta configuration or delivery failure so a retry-capable
-gateway can redeliver. Confirm webhook retry behavior in your merchant account.
-Without this webhook, tracking still requires an active browser poll. There is
-no background job or durable event queue in this repository.
+`https://YOUR-DOMAIN/api/payment-webhook`. The endpoint independently rechecks
+Paytm instead of trusting callback status or amount. It returns 503 while the
+payment is pending and 200 after a terminal result, allowing a retry-capable
+gateway to redeliver. It does not send Meta events.
 
 PhonePe's current P2P collect link has no server confirmation integration.
-Reliable PhonePe Purchase events require a merchant gateway with an authenticated
-status API/webhook; this patch does not treat launching an app as payment success.
-
-Webhook events currently have an order-based hashed external ID only; browser
-poll events additionally use shopper IP, user agent and existing Meta cookies.
-For stronger webhook attribution, persist shopper matching data with the order
-in a database and retrieve it here. No real payment or live Meta event is sent
-by the automated tests.
+Reliable server-side order recording would require a merchant gateway with an
+authenticated status API or webhook.

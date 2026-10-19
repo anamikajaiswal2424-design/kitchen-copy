@@ -1,6 +1,4 @@
 const { checkPaytmStatus } = require('../lib/payment');
-const { sendPurchase } = require('../lib/meta-purchase');
-
 const LONG_POLL_TIMEOUT_MS = 9_000;
 const PAYTM_API_INTERVAL_MS = 2_500;
 
@@ -20,17 +18,11 @@ module.exports = async (req, res) => {
     while (Date.now() - startedAt < LONG_POLL_TIMEOUT_MS) {
       const result = await checkPaytmStatus(String(txnid));
       if (result.status === 'success' || result.status === 'failure') {
-        let purchase;
-        if (result.status === 'success') {
-          try { purchase = await sendPurchase(String(txnid), result, req); }
-          catch { purchase = { sent: false, reason: 'delivery_failed' }; console.error('Meta Purchase delivery failed'); }
-        }
         return res.status(200).json({
           success: true,
           status: result.status,
           utr: result.utr,
           amount: result.amount,
-          purchase,
         });
       }
 

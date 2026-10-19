@@ -203,10 +203,6 @@
           const result = await api('/api/verify-payment', { txnid: payment.txnid });
           if (generation !== current || !tracking) return;
           if (result.status === 'success') {
-            await Promise.race([
-              Promise.resolve(window.trackVerifiedPurchase?.({ transactionId: payment.txnid, amount: result.amount })),
-              sleep(800),
-            ]);
             return redirectToResult('success', result);
           }
           if (result.status === 'failure') return redirectToResult('failure', result);
@@ -292,7 +288,7 @@
       window.fireStorePixelEvent?.('AddPaymentInfo', {
         value: Number(payment.amount) || 0,
         currency: 'INR',
-      });
+      }, payment.txnid);
       if (selected === 'qr') {
         root.querySelector('#kp-qr').src = payment.qrCodeUrl;
         root.querySelector('#kp-qr-amount').textContent = money(payment.amount);

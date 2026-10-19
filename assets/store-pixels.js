@@ -85,9 +85,6 @@
 
     const requestId = ++pageViewRequestId;
 
-    if (currentPath === "/success.html") {
-      return;
-    }
 
     try {
       const pixelIds = await ready;
@@ -146,7 +143,7 @@
 
       pixelIds.forEach(id => window.fbq(
         "trackSingle", id, eventName, eventParameters,
-        dedupeKey ? { eventID: `purchase:${dedupeKey}` } : {},
+        dedupeKey ? { eventID: `${eventName}:${dedupeKey}` } : {},
       ));
 
       if (storageKey) {
@@ -157,17 +154,5 @@
     } catch {}
   };
 
-  window.trackVerifiedPurchase = ({
-    transactionId,
-    amount,
-  }) =>
-    window.fireStorePixelEvent(
-      "Purchase",
-      {
-        value: Number(amount) || 0,
-        currency: "INR",
-      },
-      transactionId || "",
-    );
 })();
 

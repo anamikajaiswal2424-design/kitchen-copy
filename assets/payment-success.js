@@ -1,5 +1,13 @@
 (() => {
-  const params = new URLSearchParams(location.search);
+  const successQuery = (() => {
+    if (location.search) return location.search;
+    try {
+      return sessionStorage.getItem('nexshop_success_query') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const params = new URLSearchParams(successQuery);
   const transactionId = String(
     params.get('transactionId') || params.get('order_id') || '',
   ).trim();
@@ -37,7 +45,7 @@
     return result;
   }
 
-  async function trackConfirmedPurchase() {
+  async function verifyConfirmedPayment() {
     const status = statusFromUrl.toLowerCase();
     const looksLikeRealOrder = /^TXN\d{10,20}$/.test(transactionId);
 
@@ -61,22 +69,9 @@
     document.getElementById('status').textContent = 'done';
     showUtr(verified.utr || utrFromUrl);
 
-    if (typeof window.fireStorePixelEvent !== 'function') {
-      return;
-    }
-
-    await window.fireStorePixelEvent(
-      'Purchase',
-      {
-        value: amount,
-        currency: 'INR',
-        order_id: transactionId,
-      },
-      transactionId,
-    );
   }
 
-  trackConfirmedPurchase().catch(() => {});
+  verifyConfirmedPayment().catch(() => {});
 
   try {
     localStorage.removeItem('nexshop_cart');
